@@ -1,64 +1,19 @@
 trigger:
 - main
 
+pool:
+  vmImage: 'ubuntu-latest'
+
 variables:
-  imageName: 'manoj-personalweb'
-  acrName: 'manojweb'
-  containerAppName: 'manojweb-containerapp'
-  resourceGroup: 'manoj-web-RG'
-  imageTag: '$(Build.BuildId)'
+  imageName: 'manoj-portfolio'
 
-stages:
-
-# -----------------------
-# CI STAGE
-# -----------------------
-- stage: Build
+steps:
+- task: Docker@2
   displayName: Build and Push Image
-  jobs:
-  - job: BuildPush
-    pool:
-      vmImage: 'ubuntu-latest'
-
-    steps:
-
-    - task: Docker@2
-      displayName: Login to ACR
-      inputs:
-        containerRegistry: 'azure-service-conn'
-        command: 'login'
-
-    - task: Docker@2
-      displayName: Build and Push Image
-      inputs:
-        containerRegistry: 'azure-service-conn'
-        repository: '$(imageName)'
-        command: 'buildAndPush'
-        Dockerfile: '**/Dockerfile'
-        tags: |
-          $(imageTag)
-
-# -----------------------
-# CD STAGE
-# -----------------------
-- stage: Deploy
-  displayName: Deploy to Container Apps
-  dependsOn: Build
-  jobs:
-  - job: DeployApp
-    pool:
-      vmImage: 'ubuntu-latest'
-
-    steps:
-
-    - task: AzureCLI@2
-      displayName: Deploy New Revision
-      inputs:
-        azureSubscription: 'azure-service-conn'
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          az containerapp update \
-            --name $(containerAppName) \
-            --resource-group $(resourceGroup) \
-            --image $(acrName).azurecr.io/$(imageName):$(imageTag)
+  inputs:
+    containerRegistry: 'manoj-acr-connection'
+    repository: 'manoj-portfolio'
+    command: 'buildAndPush'
+    Dockerfile: '**/Dockerfile'
+    tags: |
+      latest
