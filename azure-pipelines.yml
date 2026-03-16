@@ -1,55 +1,66 @@
 trigger:
-  - main
+- main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
 variables:
   acrName: manojappcr
   imageName: manojwebapp
   resourceGroup: manojdevops-rg
   containerApp: manojinovations
   tag: $(Build.BuildId)
-stages:
-  - stage: Build
-    displayName: Build and Push Image
-    jobs:
-      - job: Build
-        pool:
-          vmImage: ubuntu-latest
-        steps:
-          - checkout: self
-          - task: NodeTool@0
-            inputs:
-              versionSpec: 18.x
-          - script: |
-              npm install
-              npm run build --prod
-            displayName: Build Angular App
-          - task: Docker@2
-            displayName: Build and Push Image to ACR
-            inputs:
-              containerRegistry: manoj-acr-connection
-              repository: $(imageName)
-              command: buildAndPush
-              Dockerfile: Dockerfile
-              tags: |
-                $(tag)
-  - stage: Deploy
-    displayName: Deploy to Container App
-    dependsOn: Build
-    jobs:
-      - job: Deploy
-        pool:
-          vmImage: ubuntu-latest
-        steps:
-          - task: AzureCLI@2
-            displayName: Deploy Image to Container App
-            inputs:
-              azureSubscription: manoj-azure-connection
-              scriptType: bash
-              scriptLocation: inlineScript
-              inlineScript: |
-                
-                az extension add --name containerapp --upgrade
 
-                az containerapp update \
-                  --name $(containerApp) \
-                  --resource-group $(resourceGroup) \
-                  --image $(acrName).azurecr.io/$(imageName):$(tag)
+stages:
+
+- stage: Build
+  displayName: Build and Push Image
+
+  jobs:
+  - job: BuildJob
+
+    steps:
+
+    - checkout: self
+
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '18.x'
+
+    - script: |
+        npm install
+        npm run build
+      displayName: Build Angular
+
+    - task: Docker@2
+      displayName: Build and Push Docker Image
+      inputs:
+        containerRegistry: manoj-acr-connection
+        repository: $(imageName)
+        command: buildAndPush
+        Dockerfile: Dockerfile
+        tags: |
+          $(tag)
+
+- stage: Deploy
+  displayName: Deploy Container App
+  dependsOn: Build
+
+  jobs:
+  - job: DeployJob
+
+    steps:
+
+    - task: AzureCLI@2
+      inputs:
+        azureSubscription: manoj-azure-connection
+        scriptType: bash
+        scriptLocation: inlineScript
+        inlineScript: |
+
+          az extension add --name containerapp --upgrade
+
+          az containerapp update \
+            --name $(containerApp) \
+            --resource-group $(resourceGroup) \
+            --image $(acrName).azurecr.io/$(imageName):$(tag)
