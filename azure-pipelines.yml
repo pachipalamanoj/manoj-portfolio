@@ -1,60 +1,50 @@
+---
 trigger:
-- main
-
+  - main
 variables:
   acrName: manojappcr
   imageName: manojwebapp
   resourceGroup: manojdevops-rg
   containerApp: manojinovations
   tag: $(Build.BuildId)
-
 stages:
-
-# Build Stage
-- stage: Build
-  jobs:
-  - job: Build
-    pool:
-      vmImage: ubuntu-latest
-
-    steps:
-    - checkout: self
-    - task: NodeTool@0
-      inputs:
-        versionSpec: '18.x'
-
-    - script: |
-        npm install
-        npm run build
-      displayName: Build Angular App
-
-    - task: Docker@2
-      displayName: Build and Push Docker Image
-      inputs:
-        containerRegistry: manoj-acr-connection
-        repository: $(imageName)
-        command: buildAndPush
-        Dockerfile: Dockerfile
-        tags: |
-          $(tag)
-
-# Deploy Stage
-- stage: Deploy
-  dependsOn: Build
-
-  jobs:
-  - job: Deploy
-    pool:
-      vmImage: ubuntu-latest
-
-    steps:
-    - task: AzureCLI@2
-      inputs:
-        azureSubscription: manoj-azure-connection
-        scriptType: bash
-        scriptLocation: inlineScript
-        inlineScript: |
-          az containerapp update \
-            --name $(containerApp) \
-            --resource-group $(resourceGroup) \
-            --image $(acrName).azurecr.io/$(imageName):$(tag)
+  - stage: Build
+    jobs:
+      - job: Build
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - checkout: self
+          - task: NodeTool@0
+            inputs:
+              versionSpec: 18.x
+          - script: |
+              npm install
+              npm run build
+            displayName: Build Angular App
+          - task: Docker@2
+            displayName: Build and Push Docker Image
+            inputs:
+              containerRegistry: manoj-acr-connection
+              repository: $(imageName)
+              command: buildAndPush
+              Dockerfile: Dockerfile
+              tags: |
+                $(tag)
+  - stage: Deploy
+    dependsOn: Build
+    jobs:
+      - job: Deploy
+        pool:
+          vmImage: ubuntu-latest
+        steps:
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: manoj-azure-connection
+              scriptType: bash
+              scriptLocation: inlineScript
+              inlineScript: |
+                az containerapp update \
+                  --name $(containerApp) \
+                  --resource-group $(resourceGroup) \
+                  --image $(acrName).azurecr.io/$(imageName):$(tag)
