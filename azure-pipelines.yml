@@ -9,6 +9,7 @@ variables:
   tag: $(Build.BuildId)
 stages:
   - stage: Build
+    displayName: Build and Push Image
     jobs:
       - job: Build
         pool:
@@ -20,10 +21,10 @@ stages:
               versionSpec: 18.x
           - script: |
               npm install
-              npm run build
+              npm run build --prod
             displayName: Build Angular App
           - task: Docker@2
-            displayName: Build and Push Docker Image
+            displayName: Build and Push Image to ACR
             inputs:
               containerRegistry: manoj-acr-connection
               repository: $(imageName)
@@ -32,6 +33,7 @@ stages:
               tags: |
                 $(tag)
   - stage: Deploy
+    displayName: Deploy to Container App
     dependsOn: Build
     jobs:
       - job: Deploy
@@ -39,11 +41,15 @@ stages:
           vmImage: ubuntu-latest
         steps:
           - task: AzureCLI@2
+            displayName: Deploy Image to Container App
             inputs:
               azureSubscription: manoj-azure-connection
               scriptType: bash
               scriptLocation: inlineScript
               inlineScript: |
+                
+                az extension add --name containerapp --upgrade
+
                 az containerapp update \
                   --name $(containerApp) \
                   --resource-group $(resourceGroup) \
