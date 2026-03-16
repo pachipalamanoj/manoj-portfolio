@@ -44,15 +44,15 @@ stages:
 
   jobs:
   - job: Deploy
+    pool:
+      vmImage: ubuntu-latest
 
     steps:
-
     - task: AzureCLI@2
       inputs:
         azureSubscription: manoj-azure-connection
         scriptType: bash
         scriptLocation: inlineScript
-
         inlineScript: |
           az containerapp update \
             --name $(containerApp) \
