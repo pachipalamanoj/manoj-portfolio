@@ -52,7 +52,7 @@ stages:
                         --name manojinovations \
                         --resource-group $(resourceGroup) \
                         --image $(acrName).azurecr.io/$(imageName):$(tag)
-  - stage: QA_analysis
+  - stage: QA
     displayName: Deploy to QA
     dependsOn: Dev
     jobs:
@@ -75,7 +75,7 @@ stages:
                         --image $(acrName).azurecr.io/$(imageName):$(tag)
   - stage: Prod
     displayName: Deploy to PROD
-    dependsOn: QA_analysis
+    dependsOn: QA
     jobs:
       - deployment: ProdDeploy
         environment: prod
