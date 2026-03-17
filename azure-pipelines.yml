@@ -1,96 +1,126 @@
----
+# azure-pipelines.yml
 trigger:
   - main
+
+# Use your self-hosted Windows agent
 pool:
-  name: Default
+  name: Default  # Replace with your agent pool name
+
 variables:
   acrName: manojappcr
   imageName: manojwebapp
   resourceGroup: manojdevops-rg
+  containerApp: manojinovations
   tag: $(Build.BuildId)
+
 stages:
-  - stage: Build
-    displayName: Build & Push Image
-    jobs:
-      - job: BuildJob
-        steps:
-          - checkout: self
-          - task: NodeTool@0
-            inputs:
-              versionSpec: 18.x
-          - script: |
-              npm install
-              npm run build
-            displayName: Build Angular
-          - task: Docker@2
-            displayName: Build and Push Image
-            inputs:
-              containerRegistry: manoj-acr-connection
-              repository: $(imageName)
-              command: buildAndPush
-              Dockerfile: Dockerfile
-              tags: |
-                $(tag)
-  - stage: Dev
-    displayName: Deploy to DEV
-    dependsOn: Build
-    jobs:
-      - deployment: DevDeploy
-        environment: dev
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - task: AzureCLI@2
-                  inputs:
-                    azureSubscription: manoj-azure-connection
-                    scriptType: bash
-                    scriptLocation: inlineScript
-                    inlineScript: |
-                      
-                      az containerapp update \
-                        --name manojinovations \
-                        --resource-group $(resourceGroup) \
-                        --image $(acrName).azurecr.io/$(imageName):$(tag)
-  - stage: QA
-    displayName: Deploy to QA
-    dependsOn: Dev
-    jobs:
-      - deployment: QADeploy
-        environment: qa
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - task: AzureCLI@2
-                  inputs:
-                    azureSubscription: manoj-azure-connection
-                    scriptType: bash
-                    scriptLocation: inlineScript
-                    inlineScript: |
-                      
-                      az containerapp update \
-                        --name manojinovations \
-                        --resource-group $(resourceGroup) \
-                        --image $(acrName).azurecr.io/$(imageName):$(tag)
-  - stage: Prod
-    displayName: Deploy to PROD
-    dependsOn: QA
-    jobs:
-      - deployment: ProdDeploy
-        environment: prod
-        strategy:
-          runOnce:
-            deploy:
-              steps:
-                - task: AzureCLI@2
-                  inputs:
-                    azureSubscription: manoj-azure-connection
-                    scriptType: bash
-                    scriptLocation: inlineScript
-                    inlineScript: |
-                      
-                      az containerapp update \
-                        --name manojinovations \
-                        --resource-group $(resourceGroup) \
-                        --image $(acrName).azurecr.io/$(imageName):$(tag)
+
+# -------------------------
+# Stage 1: Build Angular App
+# -------------------------
+- stage: Build
+  displayName: Build & Push Docker Image
+  jobs:
+    - job: BuildJob
+      displayName: Build Job
+      steps:
+        - checkout: self
+
+        # Install Node
+        - task: NodeTool@0
+          inputs:
+            versionSpec: '18.x'
+
+        # Build Angular App
+        - script: |
+            node -v
+            npm -v
+            npm install
+            npm run build
+          displayName: Build Angular App
+
+        # Build & Push Docker Image
+        - task: Docker@2
+          displayName: Build and Push Docker Image
+          inputs:
+            containerRegistry: manoj-acr-connection   # Your ACR service connection
+            repository: $(imageName)
+            command: buildAndPush
+            Dockerfile: Dockerfile
+            tags: |
+              $(tag)
+
+# -------------------------
+# Stage 2: Deploy to DEV
+# -------------------------
+- stage: Dev
+  displayName: Deploy to DEV
+  dependsOn: Build
+  jobs:
+    - deployment: DevDeploy
+      displayName: Deploy to Dev
+      environment: dev
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: AzureCLI@2
+                inputs:
+                  azureSubscription: manoj-azure-connection
+                  scriptType: ps
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    az containerapp update `
+                      --name $(containerApp) `
+                      --resource-group $(resourceGroup) `
+                      --image $(acrName).azurecr.io/$(imageName):$(tag)
+
+# -------------------------
+# Stage 3: Deploy to QA
+# -------------------------
+- stage: QA
+  displayName: Deploy to QA
+  dependsOn: Dev
+  jobs:
+    - deployment: QADeploy
+      displayName: Deploy to QA
+      environment: qa
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: AzureCLI@2
+                inputs:
+                  azureSubscription: manoj-azure-connection
+                  scriptType: ps
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    az containerapp update `
+                      --name $(containerApp) `
+                      --resource-group $(resourceGroup) `
+                      --image $(acrName).azurecr.io/$(imageName):$(tag)
+
+# -------------------------
+# Stage 4: Deploy to PROD
+# -------------------------
+- stage: Prod
+  displayName: Deploy to PROD
+  dependsOn: QA
+  jobs:
+    - deployment: ProdDeploy
+      displayName: Deploy to Prod
+      environment: prod
+      strategy:
+        runOnce:
+          deploy:
+            steps:
+              - task: AzureCLI@2
+                inputs:
+                  azureSubscription: manoj-azure-connection
+                  scriptType: ps
+                  scriptLocation: inlineScript
+                  inlineScript: |
+                    az containerapp update `
+                      --name $(containerApp) `
+                      --resource-group $(resourceGroup) `
+                      --image $(acrName).azurecr.io/$(imageName):$(tag)
