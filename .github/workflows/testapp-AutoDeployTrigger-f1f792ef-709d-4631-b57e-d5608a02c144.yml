@@ -1,28 +1,26 @@
 name: Trigger auto deployment for testapp
 
-# When this action will be executed
 on:
-  # Automatically trigger it when detected changes in repo
   push:
     branches: 
-      [ test ]
+      - test
     paths:
-    - '**'
-    - '.github/workflows/testapp-AutoDeployTrigger-f1f792ef-709d-4631-b57e-d5608a02c144.yml'
+      - '**'
+      - '.github/workflows/testapp-AutoDeployTrigger-f1f792ef-709d-4631-b57e-d5608a02c144.yml'
 
-  # Allow manual trigger 
-  workflow_dispatch:      
+  workflow_dispatch:
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+
     permissions: 
-      id-token: write #This is required for requesting the OIDC JWT Token
-      contents: read #Required when GH token is used to authenticate with private repo
+      id-token: write
+      contents: read
 
     steps:
-      - name: Checkout to the branch
-        uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v3
 
       - name: Azure Login
         uses: azure/login@v2
@@ -31,19 +29,25 @@ jobs:
           tenant-id: ${{ secrets.TESTAPP_AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.TESTAPP_AZURE_SUBSCRIPTION_ID }}
 
-      - name: Build and push container image to registry
+      - name: Build and Deploy to Azure Container Apps
         uses: azure/container-apps-deploy-action@v2
         with:
           appSourcePath: ${{ github.workspace }}
-          _dockerfilePathKey_: _dockerfilePath_
-          _targetLabelKey_: _targetLabel_
-          registryUrl: 
-          registryUsername: ${{ secrets.TESTAPP_REGISTRY_USERNAME }}
-          registryPassword: ${{ secrets.TESTAPP_REGISTRY_PASSWORD }}
+
+          # Docker configuration
+          dockerfilePath: ./Dockerfile
+
+          # Azure Container Registry (MAKE SURE THIS EXISTS)
+          acrName: manojacr
+
+          # App details
           containerAppName: testapp
           resourceGroup: manojdevops-rg
-          imageToBuild: default/[parameters('containerAppName')]:${{ github.sha }}
-          _buildArgumentsKey_: |
-            _buildArgumentsValues_
+          containerAppEnvironment: manojwebappenv
 
+          # Image to build and push
+          imageToBuild: manojacr.azurecr.io/testapp:${{ github.sha }}
 
+          # Optional but recommended
+          targetPort: 80
+          ingress: external
