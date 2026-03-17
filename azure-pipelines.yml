@@ -47,9 +47,9 @@ stages:
                     scriptType: ps
                     scriptLocation: inlineScript
                     inlineScript: |
-                      az containerapp update \
-                        --name manojinovations \
-                        --resource-group $(resourceGroup) \
+                      az containerapp update `
+                        --name manojinovations `
+                        --resource-group $(resourceGroup) `
                         --image $(acrName).azurecr.io/$(imageName):$(tag)
   - stage: QA
     displayName: Deploy to QA
@@ -67,10 +67,9 @@ stages:
                     scriptType: ps
                     scriptLocation: inlineScript
                     inlineScript: |
-                      
-                      az containerapp update \
-                        --name manojinovations \
-                        --resource-group $(resourceGroup) \
+                      az containerapp update `
+                        --name manojinovations `
+                        --resource-group $(resourceGroup) `
                         --image $(acrName).azurecr.io/$(imageName):$(tag)
   - stage: Prod
     displayName: Deploy to PROD
@@ -88,8 +87,7 @@ stages:
                     scriptType: ps
                     scriptLocation: inlineScript
                     inlineScript: |
-                      
-                      az containerapp update \
-                        --name manojinovations \
-                        --resource-group $(resourceGroup) \
+                      az containerapp update `
+                        --name manojinovations `
+                        --resource-group $(resourceGroup) `
                         --image $(acrName).azurecr.io/$(imageName):$(tag)
