@@ -44,10 +44,9 @@ stages:
                 - task: AzureCLI@2
                   inputs:
                     azureSubscription: manoj-azure-connection
-                    scriptType: bash
+                    scriptType: ps
                     scriptLocation: inlineScript
                     inlineScript: |
-                      
                       az containerapp update \
                         --name manojinovations \
                         --resource-group $(resourceGroup) \
