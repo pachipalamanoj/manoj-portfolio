@@ -65,7 +65,6 @@ body {
     /* box-shadow: 0 0 30px rgba(76,201,240,0.6); */
     display:flexbox;
     justify-content:flex-end;
-    overflow: hidden;
 }
 
 .vmc-logo{
