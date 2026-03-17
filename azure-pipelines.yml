@@ -1,20 +1,96 @@
+---
 trigger:
-- main
-
+  - main
 pool:
-  vmImage: 'ubuntu-latest'
-
-steps:
-
-- checkout: self
-
-- task: NodeTool@0
-  inputs:
-    versionSpec: '18.x'
-
-- script: |
-    node -v
-    npm -v
-    npm install
-    npm run build
-  displayName: Build Angular App
+  name: Default
+variables:
+  acrName: manojappcr
+  imageName: manojwebapp
+  resourceGroup: manojdevops-rg
+  tag: $(Build.BuildId)
+stages:
+  - stage: Build
+    displayName: Build & Push Image
+    jobs:
+      - job: BuildJob
+        steps:
+          - checkout: self
+          - task: NodeTool@0
+            inputs:
+              versionSpec: 18.x
+          - script: |
+              npm install
+              npm run build
+            displayName: Build Angular
+          - task: Docker@2
+            displayName: Build and Push Image
+            inputs:
+              containerRegistry: manoj-acr-connection
+              repository: $(imageName)
+              command: buildAndPush
+              Dockerfile: Dockerfile
+              tags: |
+                $(tag)
+  - stage: Dev
+    displayName: Deploy to DEV
+    dependsOn: Build
+    jobs:
+      - deployment: DevDeploy
+        environment: dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  inputs:
+                    azureSubscription: manoj-azure-connection
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      
+                      az containerapp update \
+                        --name manojinovations \
+                        --resource-group $(resourceGroup) \
+                        --image $(acrName).azurecr.io/$(imageName):$(tag)
+  - stage: QA
+    displayName: Deploy to QA
+    dependsOn: Dev
+    jobs:
+      - deployment: QADeploy
+        environment: qa
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  inputs:
+                    azureSubscription: manoj-azure-connection
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      
+                      az containerapp update \
+                        --name manojinovations \
+                        --resource-group $(resourceGroup) \
+                        --image $(acrName).azurecr.io/$(imageName):$(tag)
+  - stage: Prod
+    displayName: Deploy to PROD
+    dependsOn: QA
+    jobs:
+      - deployment: ProdDeploy
+        environment: prod
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - task: AzureCLI@2
+                  inputs:
+                    azureSubscription: manoj-azure-connection
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    inlineScript: |
+                      
+                      az containerapp update \
+                        --name manojinovations \
+                        --resource-group $(resourceGroup) \
+                        --image $(acrName).azurecr.io/$(imageName):$(tag)
